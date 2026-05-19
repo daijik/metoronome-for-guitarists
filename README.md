@@ -1,73 +1,41 @@
-# React + TypeScript + Vite
+# Metronome for Guitarists
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+ギタリスト向けのウェブメトロノームアプリ。練習時間のカウントダウンタイマーを内蔵し、設定した時間が経過すると自動で停止します。
 
-Currently, two official plugins are available:
+## 機能
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- BPM 設定（30〜240）
+- 拍子選択（2/4, 3/4, 4/4, 6/8）
+- ビート表示（1拍目アクセントあり）
+- 練習タイマー（プリセット or 任意の分数を設定、残り時間になると自動停止）
 
-## React Compiler
+## 使い方
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. 練習時間を選択する（プリセット: 1/3/5/10/15/30分、または任意入力）
+2. BPM と拍子を設定する
+3. **Start** を押すとメトロノームとタイマーが同時に動き出す
+4. 設定時間が経過すると自動停止。途中で止めたい場合は **Stop** を押す（タイマーはリセットされる）
 
-## Expanding the ESLint configuration
+## 開発環境
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Node.js 18 以上が必要です。
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## ビルド
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run build
+# dist/ 以下に静的ファイルが生成される
 ```
+
+生成された `dist/index.html` はサーバーなしでそのまま開けます。
+
+## 技術スタック
+
+- React 19 + TypeScript
+- Vite
+- Web Audio API（lookahead scheduler による正確なタイミング制御）
