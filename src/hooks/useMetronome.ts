@@ -17,11 +17,11 @@ function scheduleClick(ctx: AudioContext, time: number, isAccent: boolean): void
   const gain = ctx.createGain();
   osc.connect(gain);
   gain.connect(ctx.destination);
-  osc.frequency.value = isAccent ? 1000 : 800;
-  gain.gain.setValueAtTime(isAccent ? 0.8 : 0.5, time);
-  gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+  osc.frequency.value = isAccent ? 1400 : 800;
+  gain.gain.setValueAtTime(isAccent ? 1.0 : 0.5, time);
+  gain.gain.exponentialRampToValueAtTime(0.001, time + (isAccent ? 0.08 : 0.05));
   osc.start(time);
-  osc.stop(time + 0.05);
+  osc.stop(time + (isAccent ? 0.08 : 0.05));
 }
 
 export interface MetronomeState {
