@@ -1,0 +1,214 @@
+.tuner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 2.5rem 2rem;
+  background: #1a1a2e;
+  border-radius: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  width: 100%;
+}
+
+.tuner-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+/* Tuning */
+.tuner-tunings {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.tuner-tuning-btn {
+  padding: 0.3rem 0.65rem;
+  border-radius: 0.4rem;
+  border: 2px solid #4a5568;
+  background: #2d3748;
+  color: #a0aec0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.tuner-tuning-btn:hover {
+  border-color: #63b3ed;
+  color: #e2e8f0;
+}
+
+.tuner-tuning-btn--active {
+  background: #2b6cb0;
+  border-color: #63b3ed;
+  color: #e2e8f0;
+}
+
+/* Detected note */
+.tuner-note {
+  font-size: 5rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #e2e8f0;
+  transition: color 0.15s;
+}
+
+.tuner-note--in-tune {
+  color: #48bb78;
+}
+
+.tuner-octave {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #718096;
+  margin-left: 0.25rem;
+}
+
+.tuner-frequency {
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  color: #718096;
+  margin-top: -1rem;
+}
+
+/* Cents meter */
+.tuner-meter {
+  width: 100%;
+}
+
+.tuner-meter-track {
+  position: relative;
+  height: 2.5rem;
+  background: #2d3748;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.tuner-meter-center {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  margin-left: -1px;
+  background: #718096;
+}
+
+.tuner-meter-needle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  margin-left: -2px;
+  background: #f6ad55;
+  box-shadow: 0 0 8px #f6ad55;
+  transition: left 0.1s linear;
+}
+
+.tuner-meter-needle--in-tune {
+  background: #48bb78;
+  box-shadow: 0 0 12px #48bb78;
+}
+
+.tuner-meter-labels {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: #718096;
+}
+
+.tuner-status {
+  min-height: 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #a0aec0;
+}
+
+.tuner-status--in-tune {
+  color: #48bb78;
+}
+
+/* Strings */
+.tuner-strings {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.tuner-string {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.4rem 0;
+  border-radius: 0.4rem;
+  border: 2px solid #4a5568;
+  background: #2d3748;
+  color: #a0aec0;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.tuner-string--active {
+  background: #2b6cb0;
+  border-color: #63b3ed;
+  color: #e2e8f0;
+}
+
+.tuner-string--in-tune {
+  background: #276749;
+  border-color: #48bb78;
+}
+
+.tuner-string-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.tuner-string-number {
+  font-size: 0.65rem;
+}
+
+/* Start/Stop */
+.tuner-btn {
+  width: 7rem;
+  height: 7rem;
+  border-radius: 50%;
+  border: none;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #1a202c;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.tuner-btn:hover {
+  transform: scale(1.05);
+}
+
+.tuner-btn:active {
+  transform: scale(0.97);
+}
+
+.tuner-btn--start {
+  background: #48bb78;
+  box-shadow: 0 4px 20px rgba(72, 187, 120, 0.4);
+}
+
+.tuner-btn--stop {
+  background: #fc8181;
+  box-shadow: 0 4px 20px rgba(252, 129, 129, 0.4);
+}
+
+.tuner-error {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #fc8181;
+  text-align: center;
+}
