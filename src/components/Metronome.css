@@ -340,3 +340,134 @@
   border-color: #63b3ed;
   color: #e2e8f0;
 }
+
+.bpm-btn:disabled,
+.bpm-slider:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.bpm-btn:disabled:hover {
+  background: #2d3748;
+  border-color: #4a5568;
+}
+
+.bpm-number-input:disabled {
+  color: #f6ad55;
+  opacity: 1;
+}
+
+/* Tempo up */
+.tempo-up {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 0.9rem 1rem;
+  border: 2px solid #2d3748;
+  border-radius: 0.75rem;
+  margin-top: -0.75rem;
+}
+
+.tempo-up--on {
+  border-color: #4a5568;
+}
+
+.tempo-up-switch {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tempo-up-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.tempo-up-switch-track {
+  position: relative;
+  width: 2.4rem;
+  height: 1.3rem;
+  border-radius: 999px;
+  background: #4a5568;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.tempo-up-switch-track::after {
+  content: "";
+  position: absolute;
+  top: 0.15rem;
+  left: 0.15rem;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: #e2e8f0;
+  transition: transform 0.15s;
+}
+
+.tempo-up-switch input:checked + .tempo-up-switch-track {
+  background: #f6ad55;
+}
+
+.tempo-up-switch input:checked + .tempo-up-switch-track::after {
+  transform: translateX(1.1rem);
+}
+
+.tempo-up-switch input:focus-visible + .tempo-up-switch-track {
+  outline: 2px solid #63b3ed;
+  outline-offset: 2px;
+}
+
+.tempo-up-switch input:disabled + .tempo-up-switch-track {
+  opacity: 0.5;
+}
+
+.tempo-up-switch:has(input:disabled) {
+  cursor: default;
+}
+
+.tempo-up-switch-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.tempo-up-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.tempo-up-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.tempo-up-field-label {
+  font-size: 0.8rem;
+  color: #a0aec0;
+}
+
+.tempo-up-target-input {
+  width: 4.5rem;
+}
+
+.tempo-up-info {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #a0aec0;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+}
+
+.tempo-up-info--warn {
+  color: #fc8181;
+}

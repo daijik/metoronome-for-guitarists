@@ -24,6 +24,47 @@ function scheduleClick(ctx: AudioContext, time: number, isAccent: boolean): void
   osc.stop(time + (isAccent ? 0.08 : 0.05));
 }
 
+const MIN_BPM = 30;
+const MAX_BPM = 240;
+
+function clampBpm(value: number): number {
+  return Math.min(MAX_BPM, Math.max(MIN_BPM, value));
+}
+
+export interface TempoUpPlan {
+  /** テンポアップの回数（0 = 変化なし） */
+  steps: number;
+  /** 1段階あたりの長さ（秒） */
+  segmentSeconds: number;
+}
+
+/**
+ * 練習時間を (steps + 1) 区間に等分し、区間ごとに stepBpm ずつ上げる。
+ * 最後の区間は目標 BPM で鳴らす。
+ */
+export function getTempoUpPlan(
+  duration: number,
+  baseBpm: number,
+  targetBpm: number,
+  stepBpm: number,
+): TempoUpPlan {
+  if (duration <= 0 || stepBpm <= 0 || targetBpm <= baseBpm) {
+    return { steps: 0, segmentSeconds: duration };
+  }
+  const steps = Math.ceil((targetBpm - baseBpm) / stepBpm);
+  return { steps, segmentSeconds: duration / (steps + 1) };
+}
+
+/** 経過秒数に対応する段階（0 = ベース BPM） */
+export function getTempoUpStage(elapsed: number, plan: TempoUpPlan): number {
+  if (plan.steps === 0 || plan.segmentSeconds <= 0) return 0;
+  return Math.min(plan.steps, Math.floor(elapsed / plan.segmentSeconds));
+}
+
+function bpmForStage(stage: number, baseBpm: number, targetBpm: number, stepBpm: number): number {
+  return Math.min(targetBpm, baseBpm + stage * stepBpm);
+}
+
 export interface MetronomeState {
   isPlaying: boolean;
   bpm: number;
@@ -33,6 +74,14 @@ export interface MetronomeState {
   duration: number;
   /** 残り時間（秒）。再生中のみカウントダウン */
   timeLeft: number;
+  /** テンポアップ機能の ON/OFF */
+  tempoUpEnabled: boolean;
+  /** テンポアップの目標 BPM */
+  targetBpm: number;
+  /** 1段階あたりの BPM 上昇幅 */
+  tempoStep: number;
+  /** 実際に鳴っている BPM（テンポアップ中は段階的に変化） */
+  currentBpm: number;
 }
 
 export interface MetronomeControls {
@@ -43,6 +92,9 @@ export interface MetronomeControls {
   setTimeSignature: (ts: TimeSignature) => void;
   /** 練習時間を秒で設定 */
   setDuration: (seconds: number) => void;
+  setTempoUpEnabled: (enabled: boolean) => void;
+  setTargetBpm: (bpm: number) => void;
+  setTempoStep: (step: number) => void;
 }
 
 export function useMetronome(): MetronomeState & MetronomeControls {
@@ -52,6 +104,11 @@ export function useMetronome(): MetronomeState & MetronomeControls {
   const [currentBeat, setCurrentBeat] = useState(-1);
   const [duration, setDurationState] = useState(600); // デフォルト10分
   const [timeLeft, setTimeLeft] = useState(600);
+  const [tempoUpEnabled, setTempoUpEnabledState] = useState(false);
+  const [targetBpm, setTargetBpmState] = useState(160);
+  const [tempoStep, setTempoStepState] = useState(5);
+  const [rampBpm, setRampBpm] = useState(120);
+  const [rampActive, setRampActive] = useState(false);
 
   const ctxRef = useRef<AudioContext | null>(null);
   const nextBeatTimeRef = useRef(0);
@@ -61,12 +118,25 @@ export function useMetronome(): MetronomeState & MetronomeControls {
   const bpmRef = useRef(bpm);
   const timeSignatureRef = useRef(timeSignature);
   const durationRef = useRef(duration);
+  const tempoUpEnabledRef = useRef(tempoUpEnabled);
+  const targetBpmRef = useRef(targetBpm);
+  const tempoStepRef = useRef(tempoStep);
+  /** 再生開始時にテンポアップが ON だったか（再生中は切り替え不可） */
+  const rampActiveRef = useRef(false);
+  /** テンポアップ中に実際に鳴らす BPM */
+  const rampBpmRef = useRef(bpm);
   // stop を ref で持つことで timer のクロージャ内から最新版を呼べる
   const stopRef = useRef<() => void>(() => {});
 
-  bpmRef.current = bpm;
-  timeSignatureRef.current = timeSignature;
-  durationRef.current = duration;
+  // スケジューラ・タイマーのクロージャから最新値を読めるよう ref に同期
+  useEffect(() => {
+    bpmRef.current = bpm;
+    timeSignatureRef.current = timeSignature;
+    durationRef.current = duration;
+    tempoUpEnabledRef.current = tempoUpEnabled;
+    targetBpmRef.current = targetBpm;
+    tempoStepRef.current = tempoStep;
+  }, [bpm, timeSignature, duration, tempoUpEnabled, targetBpm, tempoStep]);
 
   const schedule = useCallback(() => {
     const ctx = ctxRef.current;
@@ -78,7 +148,8 @@ export function useMetronome(): MetronomeState & MetronomeControls {
       const delay = (nextBeatTimeRef.current - ctx.currentTime) * 1000;
       const scheduledBeat = beat;
       setTimeout(() => setCurrentBeat(scheduledBeat), Math.max(0, delay));
-      nextBeatTimeRef.current += 60 / bpmRef.current;
+      const playingBpm = rampActiveRef.current ? rampBpmRef.current : bpmRef.current;
+      nextBeatTimeRef.current += 60 / playingBpm;
       beatIndexRef.current += 1;
     }
   }, []);
@@ -92,13 +163,17 @@ export function useMetronome(): MetronomeState & MetronomeControls {
       clearInterval(timerIntervalRef.current);
       timerIntervalRef.current = null;
     }
+    rampActiveRef.current = false;
+    setRampActive(false);
     setIsPlaying(false);
     setCurrentBeat(-1);
     // タイマーを設定値に戻す
     setTimeLeft(durationRef.current);
   }, []);
 
-  stopRef.current = stopMetronome;
+  useEffect(() => {
+    stopRef.current = stopMetronome;
+  }, [stopMetronome]);
 
   const start = useCallback(() => {
     if (!ctxRef.current) {
@@ -113,6 +188,16 @@ export function useMetronome(): MetronomeState & MetronomeControls {
     // タイマーを設定値から開始
     setTimeLeft(durationRef.current);
 
+    // テンポアップ: ベース BPM から開始
+    const baseBpm = bpmRef.current;
+    const rampTarget = targetBpmRef.current;
+    const rampStep = tempoStepRef.current;
+    const plan = getTempoUpPlan(durationRef.current, baseBpm, rampTarget, rampStep);
+    rampActiveRef.current = tempoUpEnabledRef.current;
+    setRampActive(tempoUpEnabledRef.current);
+    rampBpmRef.current = baseBpm;
+    setRampBpm(baseBpm);
+
     schedule();
     metronomeIntervalRef.current = setInterval(schedule, SCHEDULE_INTERVAL);
 
@@ -121,6 +206,14 @@ export function useMetronome(): MetronomeState & MetronomeControls {
     timerIntervalRef.current = setInterval(() => {
       remaining -= 1;
       setTimeLeft(remaining);
+      if (rampActiveRef.current) {
+        const stage = getTempoUpStage(durationRef.current - remaining, plan);
+        const next = bpmForStage(stage, baseBpm, rampTarget, rampStep);
+        if (next !== rampBpmRef.current) {
+          rampBpmRef.current = next;
+          setRampBpm(next);
+        }
+      }
       if (remaining <= 0) {
         stopRef.current();
       }
@@ -135,7 +228,19 @@ export function useMetronome(): MetronomeState & MetronomeControls {
   }, [isPlaying, start, stopMetronome]);
 
   const setBpm = useCallback((value: number) => {
-    setBpmState(Math.min(240, Math.max(30, value)));
+    setBpmState(clampBpm(value));
+  }, []);
+
+  const setTempoUpEnabled = useCallback((enabled: boolean) => {
+    setTempoUpEnabledState(enabled);
+  }, []);
+
+  const setTargetBpm = useCallback((value: number) => {
+    setTargetBpmState(clampBpm(value));
+  }, []);
+
+  const setTempoStep = useCallback((value: number) => {
+    setTempoStepState(Math.min(50, Math.max(1, value)));
   }, []);
 
   const setTimeSignature = useCallback((ts: TimeSignature) => {
@@ -164,11 +269,18 @@ export function useMetronome(): MetronomeState & MetronomeControls {
     currentBeat,
     duration,
     timeLeft,
+    tempoUpEnabled,
+    targetBpm,
+    tempoStep,
+    currentBpm: rampActive ? rampBpm : bpm,
     start,
     stop: stopMetronome,
     toggle,
     setBpm,
     setTimeSignature,
     setDuration,
+    setTempoUpEnabled,
+    setTargetBpm,
+    setTempoStep,
   };
 }

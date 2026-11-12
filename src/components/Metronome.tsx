@@ -1,4 +1,9 @@
-import { type TimeSignature, useMetronome } from "../hooks/useMetronome";
+import {
+  type TimeSignature,
+  getTempoUpPlan,
+  getTempoUpStage,
+  useMetronome,
+} from "../hooks/useMetronome";
 import "./Metronome.css";
 
 const TIME_SIGNATURES: TimeSignature[] = ["2/4", "3/4", "4/4", "6/8"];
@@ -11,11 +16,17 @@ const BEATS_PER_MEASURE: Record<TimeSignature, number> = {
 };
 
 const PRESET_MINUTES = [1, 3, 5, 10, 15, 30];
+const STEP_PRESETS = [1, 2, 5, 10];
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+function formatShortTime(seconds: number): string {
+  const total = Math.max(0, Math.round(seconds));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
 }
 
 export function Metronome() {
@@ -26,14 +37,36 @@ export function Metronome() {
     currentBeat,
     duration,
     timeLeft,
+    tempoUpEnabled,
+    targetBpm,
+    tempoStep,
+    currentBpm,
     toggle,
     setBpm,
     setTimeSignature,
     setDuration,
+    setTempoUpEnabled,
+    setTargetBpm,
+    setTempoStep,
   } = useMetronome();
 
   const totalBeats = BEATS_PER_MEASURE[timeSignature];
   const progress = duration > 0 ? timeLeft / duration : 1;
+
+  // テンポアップ
+  const rampRunning = isPlaying && tempoUpEnabled;
+  const bpmLocked = rampRunning;
+  const displayBpm = rampRunning ? currentBpm : bpm;
+  const plan = getTempoUpPlan(duration, bpm, targetBpm, tempoStep);
+  const elapsed = duration - timeLeft;
+  const stage = getTempoUpStage(elapsed, plan);
+  const nextStepIn = (stage + 1) * plan.segmentSeconds - elapsed;
+  const tempoUpInvalid = tempoUpEnabled && plan.steps === 0;
+
+  function handleTargetBpm(e: React.ChangeEvent<HTMLInputElement>) {
+    const v = parseInt(e.target.value, 10);
+    if (!isNaN(v)) setTargetBpm(v);
+  }
 
   function handleBpmInput(e: React.ChangeEvent<HTMLInputElement>) {
     setBpm(Number(e.target.value));
@@ -109,22 +142,33 @@ export function Metronome() {
 
       {/* BPM display */}
       <div className="bpm-display">
-        <button className="bpm-btn" onClick={() => setBpm(bpm - 1)} aria-label="BPM を下げる">
+        <button
+          className="bpm-btn"
+          onClick={() => setBpm(bpm - 1)}
+          disabled={bpmLocked}
+          aria-label="BPM を下げる"
+        >
           −
         </button>
         <div className="bpm-value">
           <input
             type="number"
             className="bpm-number-input"
-            value={bpm}
+            value={displayBpm}
             min={30}
             max={240}
             onChange={handleBpmNumber}
+            disabled={bpmLocked}
             aria-label="BPM"
           />
-          <span className="bpm-label">BPM</span>
+          <span className="bpm-label">{tempoUpEnabled ? "ベース BPM" : "BPM"}</span>
         </div>
-        <button className="bpm-btn" onClick={() => setBpm(bpm + 1)} aria-label="BPM を上げる">
+        <button
+          className="bpm-btn"
+          onClick={() => setBpm(bpm + 1)}
+          disabled={bpmLocked}
+          aria-label="BPM を上げる"
+        >
           ＋
         </button>
       </div>
@@ -135,13 +179,78 @@ export function Metronome() {
         className="bpm-slider"
         min={30}
         max={240}
-        value={bpm}
+        value={displayBpm}
         onChange={handleBpmInput}
+        disabled={bpmLocked}
         aria-label="BPM スライダー"
       />
       <div className="bpm-range-labels">
         <span>30</span>
         <span>240</span>
+      </div>
+
+      {/* Tempo up */}
+      <div className={`tempo-up ${tempoUpEnabled ? "tempo-up--on" : ""}`}>
+        <label className="tempo-up-switch">
+          <input
+            type="checkbox"
+            role="switch"
+            checked={tempoUpEnabled}
+            onChange={(e) => setTempoUpEnabled(e.target.checked)}
+            disabled={isPlaying}
+          />
+          <span className="tempo-up-switch-track" aria-hidden="true" />
+          <span className="tempo-up-switch-label">テンポアップ</span>
+        </label>
+
+        {tempoUpEnabled && (
+          <div className="tempo-up-body">
+            <div className="tempo-up-row">
+              <span className="tempo-up-field-label">目標 BPM</span>
+              <input
+                type="number"
+                className="timer-number-input tempo-up-target-input"
+                value={targetBpm}
+                min={30}
+                max={240}
+                onChange={handleTargetBpm}
+                disabled={isPlaying}
+                aria-label="目標 BPM"
+              />
+            </div>
+            <div className="tempo-up-row">
+              <span className="tempo-up-field-label">上げ幅</span>
+              <div className="timer-presets">
+                {STEP_PRESETS.map((st) => (
+                  <button
+                    key={st}
+                    className={`preset-btn ${tempoStep === st ? "preset-btn--active" : ""}`}
+                    onClick={() => setTempoStep(st)}
+                    disabled={isPlaying}
+                  >
+                    +{st}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {tempoUpInvalid ? (
+              <p className="tempo-up-info tempo-up-info--warn">
+                目標 BPM をベース BPM（{bpm}）より大きくしてください
+              </p>
+            ) : rampRunning ? (
+              <p className="tempo-up-info">
+                {bpm} → {targetBpm} BPM ・ 段階 {stage}/{plan.steps}
+                {stage < plan.steps && <> ・ 次のアップまで {formatShortTime(nextStepIn)}</>}
+              </p>
+            ) : (
+              <p className="tempo-up-info">
+                {bpm} → {targetBpm} BPM を {plan.steps} 回に分けて +{tempoStep} ずつ
+                （{formatShortTime(plan.segmentSeconds)} ごと）
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Start/Stop */}
